@@ -7,6 +7,7 @@ enum LeftPanelMode {
 }
 
 struct ContentView: View {
+    @StateObject private var musicViewModel = BackgroundMusicViewModel()
     // BookData.bookText가 BookContent.swift 파일에 정의되어 있다고 가정합니다.
 
     // --- 상태 변수들 ---
@@ -17,119 +18,136 @@ struct ContentView: View {
     @State private var showRightPanel = false // 오른쪽 패널 내용 표시 여부
 
     var body: some View {
-        // --- 메인 가로 스택 ---
-        HStack(spacing: 0) {
-
-            // --- 왼쪽 패널 영역 ---
-            // leftPanelMode 값에 따라 다른 뷰를 표시하거나 공간 유지
-            Group {
-                if leftPanelMode == .showingImage && !pages.isEmpty {  // pages 비어있지 않을 때만
-                    GeneratedImagePanelView(
-                        currentMode: leftPanelMode,
-                        currentPageContent: pages[currentPageIndex]
-                    )
-                } else {
-                    Color.clear
-                        .frame(width: 300) // GeneratedImagePanelView와 동일한 너비 유지
-                }
-            }
-            .transition(.move(edge: .leading).combined(with: .opacity)) // 패널 내용 전환 애니메이션
-
-            // --- 가운데: 텍스트 표시 TabView ---
-            if !pages.isEmpty {  // pages 비어있지 않을 때만
-                TabView(selection: $currentPageIndex) {
-                    ForEach(pages.indices, id: \.self) { index in
-                        ScrollView {
-                            Text(pages[index])
-                                .font(.system(size: 20))
-                                .padding()
-                                .lineSpacing(8)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        .tag(index)
-                    }
-                }
-                .tabViewStyle(.page(indexDisplayMode: .never))
-                .frame(maxWidth: .infinity, maxHeight: .infinity) // 남은 공간 모두 차지
-            }
-
-            // --- 오른쪽 패널 영역 수정 ---
-            Group {
-                if showRightPanel && !pages.isEmpty {  // pages 비어있지 않을 때만
-                    ChatPanelView(currentPageContent: .constant(pages[currentPageIndex]))
-                } else {
-                    Color.clear
-                        .frame(width: 280)
-                }
-            }
-            .transition(.move(edge: .trailing).combined(with: .opacity))
-
-        } // --- HStack 끝 ---
-        .glassBackgroundEffect() // 전체 뷰에 유리 배경 효과
-
-        // --- 왼쪽 Ornament ---
-        .ornament(
-            visibility: .visible, // 자동 표시/숨김
-            attachmentAnchor: .scene(.leading),
-            contentAlignment: .center
-        ) {
-            VStack { // 세로 버튼 배치
-                Button {
-                    // 패널 내용 모드 토글
-                    if leftPanelMode == .showingImage {
-                        leftPanelMode = .idle
-                        print("Left Panel content set to IDLE") // 상태 변경 로그
-                    } else {
-                        leftPanelMode = .showingImage
-                        print("Left Panel content set to SHOWING_IMAGE") // 상태 변경 로그
-                    }
-                } label: {
-                    // 모드에 따른 아이콘 변경
-                    Image(systemName: leftPanelMode == .showingImage ? "photo.fill.on.rectangle.fill" : "sparkles")
-                }
-                .padding() // 버튼 패딩
-            }
-            .padding(.vertical)
-            .glassBackgroundEffect() // Ornament 배경
-        }
-
-        // --- 하단 Ornament ---
-        .ornament(
-            visibility: .automatic,
-            attachmentAnchor: .scene(.bottom),
-            contentAlignment: .center
-        ) {
+        VStack(spacing: 0) {
+            // 상단에 음악 컨트롤 추가
             HStack {
-                // 이전 페이지 버튼
-                Button { if currentPageIndex > 0 { currentPageIndex -= 1 } } label: { Image(systemName: "chevron.left") }
-                .padding().disabled(currentPageIndex == 0)
-
-                Spacer() // 버튼 간 간격
-
-                // 다음 페이지 버튼
-                Button { if currentPageIndex < pages.count - 1 { currentPageIndex += 1 } } label: { Image(systemName: "chevron.right") }
-                .padding().disabled(currentPageIndex == pages.count - 1)
+                Spacer()
+                Button(action: { musicViewModel.play() }) {
+                    Image(systemName: "play.circle.fill")
+                        .font(.title2)
+                }
+                Button(action: { musicViewModel.stop() }) {
+                    Image(systemName: "stop.circle.fill")
+                        .font(.title2)
+                }
             }
             .padding(.horizontal)
-            .glassBackgroundEffect() // Ornament 배경
-        }
+            .padding(.top, 20)
+            
+            // --- 메인 가로 스택 ---
+            HStack(spacing: 0) {
 
-        // --- 오른쪽 Ornament ---
-        .ornament(
-            visibility: .visible,
-            attachmentAnchor: .scene(.trailing),
-            contentAlignment: .leading
-        ) {
-            Button {
-                showRightPanel.toggle()
-                print("Chat button tapped. showRightPanel: \(showRightPanel)")
-            } label: {
-                Label("Chat", systemImage: "message")
+                // --- 왼쪽 패널 영역 ---
+                // leftPanelMode 값에 따라 다른 뷰를 표시하거나 공간 유지
+                Group {
+                    if leftPanelMode == .showingImage && !pages.isEmpty {  // pages 비어있지 않을 때만
+                        GeneratedImagePanelView(
+                            currentMode: leftPanelMode,
+                            currentPageContent: pages[currentPageIndex]
+                        )
+                    } else {
+                        Color.clear
+                            .frame(width: 300) // GeneratedImagePanelView와 동일한 너비 유지
+                    }
+                }
+                .transition(.move(edge: .leading).combined(with: .opacity)) // 패널 내용 전환 애니메이션
+
+                // --- 가운데: 텍스트 표시 TabView ---
+                if !pages.isEmpty {  // pages 비어있지 않을 때만
+                    TabView(selection: $currentPageIndex) {
+                        ForEach(pages.indices, id: \.self) { index in
+                            ScrollView {
+                                Text(pages[index])
+                                    .font(.system(size: 20))
+                                    .padding()
+                                    .lineSpacing(8)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .tag(index)
+                        }
+                    }
+                    .tabViewStyle(.page(indexDisplayMode: .never))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity) // 남은 공간 모두 차지
+                }
+
+                // --- 오른쪽 패널 영역 수정 ---
+                Group {
+                    if showRightPanel && !pages.isEmpty {  // pages 비어있지 않을 때만
+                        ChatPanelView(currentPageContent: .constant(pages[currentPageIndex]))
+                    } else {
+                        Color.clear
+                            .frame(width: 280)
+                    }
+                }
+                .transition(.move(edge: .trailing).combined(with: .opacity))
+
+            } // --- HStack 끝 ---
+            .glassBackgroundEffect() // 전체 뷰에 유리 배경 효과
+
+            // --- 왼쪽 Ornament ---
+            .ornament(
+                visibility: .visible, // 자동 표시/숨김
+                attachmentAnchor: .scene(.leading),
+                contentAlignment: .center
+            ) {
+                VStack { // 세로 버튼 배치
+                    Button {
+                        // 패널 내용 모드 토글
+                        if leftPanelMode == .showingImage {
+                            leftPanelMode = .idle
+                            print("Left Panel content set to IDLE") // 상태 변경 로그
+                        } else {
+                            leftPanelMode = .showingImage
+                            print("Left Panel content set to SHOWING_IMAGE") // 상태 변경 로그
+                        }
+                    } label: {
+                        // 모드에 따른 아이콘 변경
+                        Image(systemName: leftPanelMode == .showingImage ? "photo.fill.on.rectangle.fill" : "sparkles")
+                    }
+                    .padding() // 버튼 패딩
+                }
+                .padding(.vertical)
+                .glassBackgroundEffect() // Ornament 배경
             }
-            .labelStyle(.iconOnly)
-            .padding()
-            .frame(width: 60)
-            .glassBackgroundEffect()
+
+            // --- 하단 Ornament ---
+            .ornament(
+                visibility: .automatic,
+                attachmentAnchor: .scene(.bottom),
+                contentAlignment: .center
+            ) {
+                HStack {
+                    // 이전 페이지 버튼
+                    Button { if currentPageIndex > 0 { currentPageIndex -= 1 } } label: { Image(systemName: "chevron.left") }
+                    .padding().disabled(currentPageIndex == 0)
+
+                    Spacer() // 버튼 간 간격
+
+                    // 다음 페이지 버튼
+                    Button { if currentPageIndex < pages.count - 1 { currentPageIndex += 1 } } label: { Image(systemName: "chevron.right") }
+                    .padding().disabled(currentPageIndex == pages.count - 1)
+                }
+                .padding(.horizontal)
+                .glassBackgroundEffect() // Ornament 배경
+            }
+
+            // --- 오른쪽 Ornament ---
+            .ornament(
+                visibility: .visible,
+                attachmentAnchor: .scene(.trailing),
+                contentAlignment: .leading
+            ) {
+                Button {
+                    showRightPanel.toggle()
+                    print("Chat button tapped. showRightPanel: \(showRightPanel)")
+                } label: {
+                    Label("Chat", systemImage: "message")
+                }
+                .labelStyle(.iconOnly)
+                .padding()
+                .frame(width: 60)
+                .glassBackgroundEffect()
+            }
         }
 
         // 뷰가 나타날 때 페이지 분할
@@ -142,7 +160,6 @@ struct ContentView: View {
         // 상태 변화에 따른 애니메이션 (여전히 문제의 원인일 수 있음)
         .animation(.easeInOut, value: leftPanelMode)
         .animation(.easeInOut, value: showRightPanel)
-
     } // --- body 끝 ---
 
     // 페이지 분할 함수
