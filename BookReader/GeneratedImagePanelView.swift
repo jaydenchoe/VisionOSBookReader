@@ -70,11 +70,21 @@ class ImageGenerationService {
         } catch {
             throw GenerationError.encodingFailed
         }
-
+        
+        // 커스텀 URLSession 구성 (HTTP/3 우회)
+        let config = URLSessionConfiguration.default
+        config.httpAdditionalHeaders = [
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Authorization": "Bearer \(apiKey)"
+        ]
+        config.waitsForConnectivity = true // 연결될 때까지 기다림
+        config.httpMaximumConnectionsPerHost = 1 // 연결 수 제한
+        
+        let session = URLSession(configuration: config)
+        
         var request = URLRequest(url: apiURL)
         request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.httpBody = encodedBody
 
         // 디버깅을 위한 요청 내용 출력
@@ -83,11 +93,19 @@ class ImageGenerationService {
             print(requestString)
         }
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
         
         // 디버깅을 위한 응답 내용 출력
         print("📥 Response Data:")
         print(String(data: data, encoding: .utf8) ?? "No response data")
+        
+        // 응답 디버깅용 추가 로그
+        if let httpResponse = response as? HTTPURLResponse {
+            print("📡 Status code: \(httpResponse.statusCode)")
+            print("📡 Content-Type: \(httpResponse.allHeaderFields["Content-Type"] ?? "알 수 없음")")
+        }
+        print("📥 Raw response:")
+        print(String(data: data, encoding: .utf8) ?? "응답 없음 또는 인코딩 실패")
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw GenerationError.invalidResponse(statusCode: 0, body: "응답이 HTTP 형식이 아닙니다.")
@@ -116,6 +134,23 @@ class ImageGenerationService {
         }
 
         return imageURLString
+    }
+
+    // 재시도 로직이 포함된 새 함수 추가
+    func generateImageURLWithRetry(prompt: String, maxRetries: Int = 2) async throws -> String {
+        var lastError: Error = GenerationError.requestFailed(NSError(domain: "초기화", code: -1))
+        
+        for attempt in 1...maxRetries {
+            do {
+                return try await generateImageURL(prompt: prompt)
+            } catch {
+                print("🚨 Attempt \(attempt) failed with error: \(error.localizedDescription)")
+                lastError = error
+                try await Task.sleep(nanoseconds: UInt64(1_000_000_000)) // 1초 대기
+            }
+        }
+        
+        throw lastError
     }
 }
 
@@ -150,7 +185,8 @@ class GeneratedImageViewModel: ObservableObject {
         print("--------------------")
         
         do {
-            let url = try await imageGenerator.generateImageURL(prompt: prompt)
+            // generateImageURL 대신 재시도 로직이 포함된 함수 사용
+            let url = try await imageGenerator.generateImageURLWithRetry(prompt: prompt)
             await MainActor.run {
                 self.imageURLString = url
                 self.isLoading = false
