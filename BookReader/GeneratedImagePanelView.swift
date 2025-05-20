@@ -214,7 +214,7 @@ struct MCPError: Codable {
 class StableDiffusionService: ImageGenerationServiceProtocol {
     private let serverURL: URL
     
-    init(serverURL: String = "http://20c3-211-201-154-2.ngrok-free.app/mcp") {
+    init(serverURL: String = "https://6a00-211-201-154-2.ngrok-free.app/mcp") {
         self.serverURL = URL(string: serverURL)!
     }
     

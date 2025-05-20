@@ -101,7 +101,7 @@ class ChatViewModel: ObservableObject {
         
         let jsonRequest: [String: Any] = [
             "jsonrpc": "2.0",
-            "method": "CallTool",
+            "method": "tools/call",
             "params": [
                 "name": "askOllama",
                 "arguments": ["prompt": formattedPrompt]
@@ -130,7 +130,7 @@ class ChatViewModel: ObservableObject {
         
         sendTCPMessage(
             host: "0.tcp.jp.ngrok.io",
-            port: 15558,
+            port: 12057,
             message: jsonString
         ) { response in
             DispatchQueue.main.async {
