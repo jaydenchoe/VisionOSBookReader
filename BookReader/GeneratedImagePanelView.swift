@@ -457,6 +457,7 @@ struct GeneratedImagePanelView: View {
                 VStack {
                     // 이미지 생성기 전환 버튼
                     HStack {
+                        // 이미지 생성기 전환 버튼 가운데 정렬
                         Spacer()
                         Button(action: {
                             viewModel.toggleGenerator()
@@ -473,6 +474,7 @@ struct GeneratedImagePanelView: View {
                         }
                         .buttonStyle(.plain)
                         .padding(.trailing, 8)
+                        Spacer()
                     }
                     
                     ZStack {

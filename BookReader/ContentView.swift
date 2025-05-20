@@ -16,22 +16,44 @@ struct ContentView: View {
     @State private var generatedImageName: String = "SampleGeneratedImage" // Asset Catalog 이미지 이름
     @State private var leftPanelMode: LeftPanelMode = .showingImage // 시작 시 이미지 표시
     @State private var showRightPanel = false // 오른쪽 패널 내용 표시 여부
+    
+    // 책 선택을 위한 상태 변수 추가
+    @State private var selectedBookIndex = 0
+    
+    // 책 제목 배열 - 각 언어로 표시
+    private let bookTitles = ["한국어", "日本語", "English"]
 
     var body: some View {
         VStack(spacing: 0) {
-            // 상단에 음악 컨트롤 추가
-            HStack {
-                Spacer()
-                Button(action: { musicViewModel.play() }) {
-                    Image(systemName: "play.circle.fill")
-                        .font(.title2)
+            // 상단에 음악 컨트롤과 책 선택 UI 추가
+            VStack {
+                // 책 선택 세그먼트 컨트롤
+                Picker("책 선택", selection: $selectedBookIndex) {
+                    ForEach(0..<bookTitles.count, id: \.self) { index in
+                        Text(bookTitles[index]).tag(index)
+                    }
                 }
-                Button(action: { musicViewModel.stop() }) {
-                    Image(systemName: "stop.circle.fill")
-                        .font(.title2)
+                .pickerStyle(.segmented)
+                .padding(.horizontal)
+                .onChange(of: selectedBookIndex) { newValue in
+                    loadSelectedBook()
                 }
+                
+                // 기존 음악 컨트롤
+                HStack {
+                    Spacer()
+                    Button(action: { musicViewModel.play() }) {
+                        Image(systemName: "play.circle.fill")
+                            .font(.title2)
+                    }
+                    Button(action: { musicViewModel.stop() }) {
+                        Image(systemName: "stop.circle.fill")
+                            .font(.title2)
+                    }
+                    Spacer()
+                }
+                .padding(.horizontal)
             }
-            .padding(.horizontal)
             .padding(.top, 20)
             
             // --- 메인 가로 스택 ---
@@ -152,8 +174,8 @@ struct ContentView: View {
 
         // 뷰가 나타날 때 페이지 분할
         .onAppear {
-            // 먼저 페이지를 로드하고
-            pages = splitTextIntoPages(BookData.bookText, maxCharsPerPage: 600)
+            // 첫 번째 책을 기본으로 로드
+            loadSelectedBook()
             print("ContentView appeared. Pages loaded: \(pages.count)") // 로딩 로그
         }
 
@@ -161,6 +183,30 @@ struct ContentView: View {
         .animation(.easeInOut, value: leftPanelMode)
         .animation(.easeInOut, value: showRightPanel)
     } // --- body 끝 ---
+
+    // 선택된 책을 로드하는 함수
+    private func loadSelectedBook() {
+        let selectedText: String
+        
+        switch selectedBookIndex {
+        case 0:
+            selectedText = BookData.bookText2  // 한국어 텍스트
+        case 1:
+            selectedText = BookData.bookText1  // 일본어 텍스트
+        case 2:
+            selectedText = BookData.bookText3  // 영어 텍스트
+        default:
+            selectedText = BookData.bookText2
+        }
+        
+        // 텍스트를 페이지로 분할
+        pages = splitTextIntoPages(selectedText, maxCharsPerPage: 600)
+        
+        // 현재 페이지를 첫 페이지로 리셋
+        currentPageIndex = 0
+        
+        print("책 선택 변경: \(bookTitles[selectedBookIndex]), 페이지 수: \(pages.count)")
+    }
 
     // 페이지 분할 함수
     private func splitTextIntoPages(_ text: String, maxCharsPerPage: Int) -> [String] {
